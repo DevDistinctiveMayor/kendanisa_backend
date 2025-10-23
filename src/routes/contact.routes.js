@@ -61,21 +61,36 @@ const contactLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+
 // Create transporter
 const createTransporter = () => {
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT) || 587,
-    secure: false,
+    port: parseInt(process.env.SMTP_PORT) || 465, // ✅ Use SSL port
+    secure: true, // ✅ Use SSL for Gmail
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
-    tls: {
-      rejectUnauthorized: process.env.NODE_ENV === 'production'
-    }
   });
 };
+
+
+// // Create transporter
+// const createTransporter = () => {
+//   return nodemailer.createTransport({
+//     host: process.env.SMTP_HOST,
+//     port: parseInt(process.env.SMTP_PORT) || 587,
+//     secure: false,
+//     auth: {
+//       user: process.env.SMTP_USER,
+//       pass: process.env.SMTP_PASS,
+//     },
+//     tls: {
+//       rejectUnauthorized: process.env.NODE_ENV === 'production'
+//     }
+//   });
+// };
 
 // POST /api/contact
 router.post('/contact', contactLimiter, async (req, res) => {
