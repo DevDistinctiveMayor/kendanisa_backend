@@ -62,19 +62,17 @@ const contactLimiter = rateLimit({
 });
 
 
-// Create transporter
 const createTransporter = () => {
   return nodemailer.createTransport({
     host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT) || 465, // ✅ Use SSL port
-    secure: true, // ✅ Use SSL for Gmail
+    port: parseInt(process.env.SMTP_PORT) || 587,
+    secure: false, // Use TLS (Brevo recommends false)
     auth: {
       user: process.env.SMTP_USER,
       pass: process.env.SMTP_PASS,
     },
   });
 };
-
 
 // // Create transporter
 // const createTransporter = () => {
