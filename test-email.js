@@ -1,36 +1,41 @@
-const nodemailer = require('nodemailer');
+const Sib = require('sib-api-v3-sdk');
 require('dotenv').config();
 
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: process.env.SMTP_PORT,
-  secure: false,
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
-
-async function testEmail() {
+async function testBrevo() {
   try {
-    await transporter.verify();
-    console.log('✅ SMTP connection verified!');
-    
-    const info = await transporter.sendMail({
-      from: `"${process.env.COMPANY_NAME}" <${process.env.SMTP_USER}>`,
-      to: process.env.ADMIN_EMAIL,
-      subject: 'Test Email - Consultation Form',
-      html: '<h1>Success!</h1><p>Your email configuration is working correctly.</p>',
+    // Initialize Brevo client
+    const client = Sib.ApiClient.instance;
+    client.authentications['api-key'].apiKey = process.env.BREVO_API_KEY;
+    const tranEmailApi = new Sib.TransactionalEmailsApi();
+
+    console.log('🔍 Verifying Brevo API key...');
+
+    // Try to send a test email
+    const response = await tranEmailApi.sendTransacEmail({
+      sender: { email: 'info@ouragent.com.ng', name: process.env.COMPANY_NAME || 'Kendanisa' },
+      to: [{ email: process.env.ADMIN_EMAIL }],
+      subject: '✅ Brevo API Test - Contact Form',
+      htmlContent: `
+        <html>
+          <body style="font-family:Arial, sans-serif; background:#f9fafb; padding:20px;">
+            <div style="max-width:600px; margin:auto; background:white; border-radius:10px; padding:20px;">
+              <h2 style="color:#037D66;">Brevo API Test Successful 🎉</h2>
+              <p>Your Brevo configuration is working correctly.</p>
+              <p><strong>Timestamp:</strong> ${new Date().toLocaleString('en-US', { timeZone: 'Africa/Lagos' })}</p>
+            </div>
+          </body>
+        </html>
+      `
     });
-    
+
     console.log('✅ Test email sent successfully!');
-    console.log('Message ID:', info.messageId);
+    console.log('📩 Message ID:', response.messageId || 'N/A');
   } catch (error) {
-    console.error('❌ Error:', error.message);
-    if (error.code === 'EAUTH') {
-      console.error('Authentication failed. Check your email and password.');
+    console.error('❌ Error sending test email:', error.message);
+    if (error.response && error.response.text) {
+      console.error('Details:', error.response.text);
     }
   }
 }
 
-testEmail();
+testBrevo();

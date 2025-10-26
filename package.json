@@ -24,6 +24,7 @@
     "mongoose": "^8.19.0",
     "nodemailer": "^7.0.9",
     "paystack": "^2.0.1",
+    "sib-api-v3-sdk": "^8.5.0",
     "stripe": "^17.7.0",
     "swagger-jsdoc": "^6.2.8",
     "swagger-ui-express": "^5.0.1"

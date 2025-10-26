@@ -1,6 +1,6 @@
 const express = require('express');
 const router = express.Router();
-const nodemailer = require('nodemailer');
+const Sib = require('sib-api-v3-sdk');
 const rateLimit = require('express-rate-limit');
 
 /**
@@ -8,45 +8,6 @@ const rateLimit = require('express-rate-limit');
  * tags:
  *   name: Contact
  *   description: Handle general contact or inquiry messages
- */
-
-/**
- * @swagger
- * /api/contact:
- *   post:
- *     tags: [Contact]
- *     summary: Submit a general contact message
- *     description: Sends a contact message to the admin and confirmation to the client.
- *     requestBody:
- *       required: true
- *       content:
- *         application/json:
- *           schema:
- *             type: object
- *             required:
- *               - name
- *               - email
- *               - message
- *             properties:
- *               name:
- *                 type: string
- *                 example: John Doe
- *               email:
- *                 type: string
- *                 format: email
- *                 example: john@example.com
- *               message:
- *                 type: string
- *                 example: "I’d like to know more about your travel packages."
- *     responses:
- *       200:
- *         description: Message sent successfully
- *       400:
- *         description: Validation error
- *       429:
- *         description: Too many requests
- *       500:
- *         description: Server error
  */
 
 // Rate limit: Max 5 contact messages per IP per hour
@@ -61,34 +22,10 @@ const contactLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-
-const createTransporter = () => {
-  return nodemailer.createTransport({
-    host: process.env.SMTP_HOST,
-    port: parseInt(process.env.SMTP_PORT) || 587,
-    secure: false, // Use TLS (Brevo recommends false)
-    auth: {
-      user: process.env.SMTP_USER,
-      pass: process.env.SMTP_PASS,
-    },
-  });
-};
-
-// // Create transporter
-// const createTransporter = () => {
-//   return nodemailer.createTransport({
-//     host: process.env.SMTP_HOST,
-//     port: parseInt(process.env.SMTP_PORT) || 587,
-//     secure: false,
-//     auth: {
-//       user: process.env.SMTP_USER,
-//       pass: process.env.SMTP_PASS,
-//     },
-//     tls: {
-//       rejectUnauthorized: process.env.NODE_ENV === 'production'
-//     }
-//   });
-// };
+// Initialize Brevo API client
+const client = Sib.ApiClient.instance;
+client.authentications['api-key'].apiKey = process.env.BREVO_API_KEY;
+const tranEmailApi = new Sib.TransactionalEmailsApi();
 
 // POST /api/contact
 router.post('/contact', contactLimiter, async (req, res) => {
@@ -111,9 +48,6 @@ router.post('/contact', contactLimiter, async (req, res) => {
       });
     }
 
-    const transporter = createTransporter();
-    await transporter.verify();
-
     const referenceNumber = `CT-${Date.now().toString().slice(-8)}`;
     const submissionDate = new Date().toLocaleString('en-US', {
       timeZone: 'Africa/Lagos',
@@ -122,11 +56,11 @@ router.post('/contact', contactLimiter, async (req, res) => {
     });
 
     // ✅ Email to Admin
-    const adminMailOptions = {
-      from: `"${process.env.COMPANY_NAME || 'Kendanisa Travel'}" <${process.env.SMTP_USER}>`,
-      to: process.env.ADMIN_EMAIL,
+    const adminMail = {
+      sender: { email: 'info@ouragent.com.ng', name: process.env.COMPANY_NAME || 'Kendanisa Travel' },
+      to: [{ email: process.env.ADMIN_EMAIL }],
       subject: `📩 New Contact Message from ${name}`,
-      html: `
+      htmlContent: `
         <html>
           <head>
             <style>
@@ -158,15 +92,15 @@ router.post('/contact', contactLimiter, async (req, res) => {
             </div>
           </body>
         </html>
-      `,
+      `
     };
 
     // ✅ Email to Client (Confirmation)
-    const clientMailOptions = {
-      from: `"${process.env.COMPANY_NAME || 'Kendanisa Travel'}" <${process.env.SMTP_USER}>`,
-      to: email,
+    const clientMail = {
+      sender: { email: 'info@ouragent.com.ng', name: process.env.COMPANY_NAME || 'Kendanisa Travel' },
+      to: [{ email }],
       subject: '✅ We’ve received your message!',
-      html: `
+      htmlContent: `
         <html>
           <head><style>
             body { font-family:'Segoe UI',Arial,sans-serif; line-height:1.6; color:#333; margin:0; padding:0;}
@@ -190,13 +124,13 @@ router.post('/contact', contactLimiter, async (req, res) => {
             </div>
           </body>
         </html>
-      `,
+      `
     };
 
-    // ✅ Send both emails
+    // ✅ Send both emails via Brevo API
     await Promise.all([
-      transporter.sendMail(adminMailOptions),
-      transporter.sendMail(clientMailOptions),
+      tranEmailApi.sendTransacEmail(adminMail),
+      tranEmailApi.sendTransacEmail(clientMail)
     ]);
 
     console.log(`✅ Contact message sent from ${email}`);
@@ -206,17 +140,13 @@ router.post('/contact', contactLimiter, async (req, res) => {
       message: 'Message sent successfully',
       data: { referenceNumber, email },
     });
+
   } catch (error) {
-    console.error('❌ Contact form error:', error);
-    if (error.code === 'EAUTH') {
-      return res.status(500).json({
-        success: false,
-        message: 'Email authentication failed. Check SMTP credentials.',
-      });
-    }
+    console.error('❌ Contact form error:', error.message || error);
     res.status(500).json({
       success: false,
       message: 'Failed to send message. Please try again later.',
+      error: error.message,
     });
   }
 });
