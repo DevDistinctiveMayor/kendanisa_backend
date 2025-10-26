@@ -9,6 +9,9 @@ require('dotenv').config();
 
 const app = express();
 
+// ✅ Tell Express to trust the proxy (important for Render, Vercel, etc.)
+app.set('trust proxy', 1);
+
 // Connect to database
 connectDB();
 
