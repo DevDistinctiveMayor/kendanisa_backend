@@ -97,7 +97,7 @@ router.post('/contact', contactLimiter, async (req, res) => {
 
     // ✅ Email to Client (Confirmation)
     const clientMail = {
-      sender: { email: 'imosesjila@kendanisaconsultingltd.com', name: process.env.COMPANY_NAME || 'Kendanisa Consulting and Travel' },
+      sender: { email: 'mosesjila@kendanisaconsultingltd.com', name: process.env.COMPANY_NAME || 'Kendanisa Consulting and Travel' },
       to: [{ email }],
       subject: '✅ We’ve received your message!',
       htmlContent: `
