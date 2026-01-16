@@ -150,7 +150,9 @@ router.post("/visa-request", visaRequestLimiter, async (req, res) => {
           </div>
 
           <div style="text-align:center; padding:20px; color:#6b7280;">
-            <p><strong>${process.env.COMPANY_NAME || "Kendanisa Travel"}</strong></p>
+            <p><strong>${
+              process.env.COMPANY_NAME || "Kendanisa Travel"
+            }</strong></p>
             <p>Automated notification from visa request form</p>
           </div>
         </div>
@@ -171,16 +173,24 @@ router.post("/visa-request", visaRequestLimiter, async (req, res) => {
       </style></head>
       <body>
         <div class="container">
-          <div class="header"><h1>✈️ Thank You, ${fullName.split(" ")[0]}!</h1></div>
+          <div class="header"><h1>✈️ Thank You, ${
+            fullName.split(" ")[0]
+          }!</h1></div>
           <div class="content">
             <p>Dear ${fullName},</p>
             <p>We have received your <strong>${serviceType}</strong> request and will contact you soon.</p>
             <div class="info">
               <p><strong>Reference Number:</strong> ${referenceNumber}</p>
-              <p><strong>Destination:</strong> ${destinationCountry || "N/A"}</p>
-              <p><strong>Preferred Contact:</strong> ${preferredContactMethod || "Email"}</p>
+              <p><strong>Destination:</strong> ${
+                destinationCountry || "N/A"
+              }</p>
+              <p><strong>Preferred Contact:</strong> ${
+                preferredContactMethod || "Email"
+              }</p>
             </div>
-            <p>Warm regards,<br><strong>${process.env.COMPANY_NAME || "Kendanisa Travel"}</strong></p>
+            <p>Warm regards,<br><strong>${
+              process.env.COMPANY_NAME || "Kendanisa Travel"
+            }</strong></p>
           </div>
         </div>
       </body>
@@ -190,7 +200,7 @@ router.post("/visa-request", visaRequestLimiter, async (req, res) => {
     /* ----------------------------
        Send via Brevo API (transactional)
        ---------------------------- */
-       
+
     // await Promise.all([
     //   transporter.sendMail(adminMailOptions),
     //   transporter.sendMail(clientMailOptions)
@@ -198,16 +208,22 @@ router.post("/visa-request", visaRequestLimiter, async (req, res) => {
     await Promise.all([
       tranEmailApi.sendTransacEmail({
         sender: {
-          email: process.env.ADMIN_EMAIL,
+          email: process.env.VISA_EMAIL || "travels@kendanisaconsultingltd.com",
           name: process.env.COMPANY_NAME || "Kendanisa Travel",
         },
-        to: [{ email: process.env.ADMIN_EMAIL, name: "Admin" }],
+        to: [
+          {
+            email:
+              process.env.VISA_EMAIL || "travels@kendanisaconsultingltd.com",
+            name: "Visa Team",
+          },
+        ],
         subject: `🌍 New Visa/Documentation Request - ${serviceType}`,
         htmlContent: adminHtml,
       }),
       tranEmailApi.sendTransacEmail({
         sender: {
-          email: process.env.ADMIN_EMAIL,
+          email: process.env.VISA_EMAIL || "travels@kendanisaconsultingltd.com",
           name: process.env.COMPANY_NAME || "Kendanisa Travel",
         },
         to: [{ email, name: fullName }],
@@ -215,7 +231,6 @@ router.post("/visa-request", visaRequestLimiter, async (req, res) => {
         htmlContent: clientHtml,
       }),
     ]);
-
     console.log(`✅ Visa request email sent from ${email} (${serviceType})`);
 
     return res.status(200).json({
@@ -224,7 +239,10 @@ router.post("/visa-request", visaRequestLimiter, async (req, res) => {
       data: { referenceNumber, email, serviceType },
     });
   } catch (error) {
-    console.error("❌ Visa request error:", error && error.message ? error.message : error);
+    console.error(
+      "❌ Visa request error:",
+      error && error.message ? error.message : error
+    );
     // Helpful debug output for Brevo errors (keeps logs readable)
     if (error && error.response && error.response.body) {
       console.error("Brevo response body:", error.response.body);

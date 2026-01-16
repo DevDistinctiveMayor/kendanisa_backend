@@ -1,7 +1,7 @@
-const express = require('express');
+const express = require("express");
 const router = express.Router();
-const Sib = require('sib-api-v3-sdk');
-const rateLimit = require('express-rate-limit');
+const Sib = require("sib-api-v3-sdk");
+const rateLimit = require("express-rate-limit");
 
 /**
  * @swagger
@@ -16,7 +16,7 @@ const contactLimiter = rateLimit({
   max: 5,
   message: {
     success: false,
-    message: 'Too many contact requests from this IP. Please try again later.'
+    message: "Too many contact requests from this IP. Please try again later.",
   },
   standardHeaders: true,
   legacyHeaders: false,
@@ -24,11 +24,11 @@ const contactLimiter = rateLimit({
 
 // Initialize Brevo API client
 const client = Sib.ApiClient.instance;
-client.authentications['api-key'].apiKey = process.env.BREVO_API_KEY;
+client.authentications["api-key"].apiKey = process.env.BREVO_API_KEY;
 const tranEmailApi = new Sib.TransactionalEmailsApi();
 
 // POST /api/contact
-router.post('/contact', contactLimiter, async (req, res) => {
+router.post("/contact", contactLimiter, async (req, res) => {
   try {
     const { name, email, message } = req.body;
 
@@ -36,7 +36,7 @@ router.post('/contact', contactLimiter, async (req, res) => {
     if (!name || !email || !message) {
       return res.status(400).json({
         success: false,
-        message: 'Please fill in all required fields'
+        message: "Please fill in all required fields",
       });
     }
 
@@ -44,21 +44,28 @@ router.post('/contact', contactLimiter, async (req, res) => {
     if (!emailRegex.test(email)) {
       return res.status(400).json({
         success: false,
-        message: 'Please provide a valid email address'
+        message: "Please provide a valid email address",
       });
     }
 
     const referenceNumber = `CT-${Date.now().toString().slice(-8)}`;
-    const submissionDate = new Date().toLocaleString('en-US', {
-      timeZone: 'Africa/Lagos',
-      dateStyle: 'full',
-      timeStyle: 'short',
+    const submissionDate = new Date().toLocaleString("en-US", {
+      timeZone: "Africa/Lagos",
+      dateStyle: "full",
+      timeStyle: "short",
     });
 
     // ✅ Email to Admin
     const adminMail = {
-      sender: { email: 'mosesjila@kendanisaconsultingltd.com', name: process.env.COMPANY_NAME || 'Kendanisa Travel' },
-      to: [{ email: process.env.ADMIN_EMAIL }],
+      sender: {
+        email: process.env.CONTACT_EMAIL || "info@kendanisaconsultingltd.com",
+        name: process.env.COMPANY_NAME || "Kendanisa Travel",
+      },
+      to: [
+        {
+          email: process.env.CONTACT_EMAIL || "info@kendanisaconsultingltd.com",
+        },
+      ],
       subject: `📩 New Contact Message from ${name}`,
       htmlContent: `
         <html>
@@ -87,19 +94,24 @@ router.post('/contact', contactLimiter, async (req, res) => {
                 <div class="info-row"><span class="label">Message:</span><br>${message}</div>
               </div>
               <div class="footer">
-                <p>${process.env.COMPANY_NAME || 'Kendanisa Travel'} | Automated Notification</p>
+                <p>${
+                  process.env.COMPANY_NAME || "Kendanisa Travel"
+                } | Automated Notification</p>
               </div>
             </div>
           </body>
         </html>
-      `
+      `,
     };
 
     // ✅ Email to Client (Confirmation)
     const clientMail = {
-      sender: { email: 'mosesjila@kendanisaconsultingltd.com', name: process.env.COMPANY_NAME || 'Kendanisa Consulting and Travel' },
+      sender: {
+        email: process.env.CONTACT_EMAIL || "info@kendanisaconsultingltd.com",
+        name: process.env.COMPANY_NAME || "Kendanisa Consulting and Travel",
+      },
       to: [{ email }],
-      subject: '✅ We’ve received your message!',
+      subject: "✅ We’ve received your message!",
       htmlContent: `
         <html>
           <head><style>
@@ -112,43 +124,43 @@ router.post('/contact', contactLimiter, async (req, res) => {
           </style></head>
           <body>
             <div class="container">
-              <div class="header"><h2>Thank You, ${name.split(' ')[0]}!</h2></div>
+              <div class="header"><h2>Thank You, ${
+                name.split(" ")[0]
+              }!</h2></div>
               <div class="content">
                 <p>We’ve received your message and our team will get back to you shortly.</p>
                 <div class="info">
                   <p><strong>Reference Number:</strong> ${referenceNumber}</p>
                   <p><strong>Date:</strong> ${submissionDate}</p>
                 </div>
-                <p>Warm regards,<br><strong>${process.env.COMPANY_NAME || 'Kendanisa Travel'}</strong></p>
+                <p>Warm regards,<br><strong>${
+                  process.env.COMPANY_NAME || "Kendanisa Travel"
+                }</strong></p>
               </div>
             </div>
           </body>
         </html>
-      `
+      `,
     };
 
     // ✅ Send both emails via Brevo API
     await Promise.all([
       tranEmailApi.sendTransacEmail(adminMail),
-      tranEmailApi.sendTransacEmail(clientMail)
+      tranEmailApi.sendTransacEmail(clientMail),
     ]);
-
-
-
 
     console.log(`✅ Contact message sent from ${email}`);
 
     res.status(200).json({
       success: true,
-      message: 'Message sent successfully',
+      message: "Message sent successfully",
       data: { referenceNumber, email },
     });
-
   } catch (error) {
-    console.error('❌ Contact form error:', error.message || error);
+    console.error("❌ Contact form error:", error.message || error);
     res.status(500).json({
       success: false,
-      message: 'Failed to send message. Please try again later.',
+      message: "Failed to send message. Please try again later.",
       error: error.message,
     });
   }
